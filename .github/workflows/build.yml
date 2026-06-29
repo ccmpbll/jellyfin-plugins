@@ -30,17 +30,21 @@ jobs:
       - name: Build
         run: dotnet build "${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/Jellyfin.Plugin.${{ matrix.plugin.name }}.csproj" -c Release --no-restore
 
-      - name: Collect artifact
+      - name: Package plugin
         run: |
-          mkdir -p artifacts/${{ matrix.plugin.name }}
-          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/bin/Release/net9.0/Jellyfin.Plugin.${{ matrix.plugin.name }}.dll artifacts/${{ matrix.plugin.name }}/
-          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/meta.json artifacts/${{ matrix.plugin.name }}/
+          mkdir -p staging
+          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/bin/Release/net9.0/Jellyfin.Plugin.${{ matrix.plugin.name }}.dll staging/
+          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/meta.json staging/
+          cd staging
+          zip -r ../artifacts/${{ matrix.plugin.name }}.zip .
+          cd ..
+          md5sum artifacts/${{ matrix.plugin.name }}.zip | awk '{print $1}' > artifacts/${{ matrix.plugin.name }}.md5
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.plugin.name }}
-          path: artifacts/${{ matrix.plugin.name }}/
+          path: artifacts/
 
   release:
     needs: build
@@ -56,17 +60,10 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           path: artifacts
+          merge-multiple: true
 
-      - name: Create release zips
-        run: |
-          cd artifacts
-          for plugin in */; do
-            [ -d "$plugin" ] || continue
-            plugin_name="${plugin%/}"
-            cd "$plugin_name"
-            zip -r "../${plugin_name}.zip" .
-            cd ..
-          done
+      - name: List artifacts
+        run: find artifacts -type f
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -75,10 +72,7 @@ jobs:
           files: artifacts/*.zip
 
       - name: Generate manifest
-        run: |
-          ls -la artifacts/
-          python3 .github/scripts/generate-manifest.py > manifest.json
-          cat manifest.json
+        run: python3 .github/scripts/generate-manifest.py > manifest.json
 
       - name: Upload manifest to release
         uses: softprops/action-gh-release@v2
