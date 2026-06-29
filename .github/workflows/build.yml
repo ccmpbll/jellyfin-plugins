@@ -1,0 +1,83 @@
+name: Build Plugins
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        plugin:
+          - name: PlaylistRestrictor
+            path: plugins/PlaylistRestrictor
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore "${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/Jellyfin.Plugin.${{ matrix.plugin.name }}.csproj"
+
+      - name: Build
+        run: dotnet build "${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/Jellyfin.Plugin.${{ matrix.plugin.name }}.csproj" -c Release --no-restore
+
+      - name: Collect artifact
+        run: |
+          mkdir -p artifacts/${{ matrix.plugin.name }}
+          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/bin/Release/net9.0/Jellyfin.Plugin.${{ matrix.plugin.name }}.dll artifacts/${{ matrix.plugin.name }}/
+          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/meta.json artifacts/${{ matrix.plugin.name }}/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.plugin.name }}
+          path: artifacts/${{ matrix.plugin.name }}/
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release zips
+        run: |
+          cd artifacts
+          for plugin in */; do
+            plugin_name="${plugin%/}"
+            cd "$plugin_name"
+            zip -r "../${plugin_name}.zip" .
+            cd ..
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*.zip
+
+      - name: Generate manifest
+        run: |
+          python3 .github/scripts/generate-manifest.py > manifest.json
+
+      - name: Upload manifest to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: manifest.json
