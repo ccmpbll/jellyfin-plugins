@@ -76,7 +76,9 @@ jobs:
 
       - name: Generate manifest
         run: |
+          ls -la artifacts/
           python3 .github/scripts/generate-manifest.py > manifest.json
+          cat manifest.json
 
       - name: Upload manifest to release
         uses: softprops/action-gh-release@v2
