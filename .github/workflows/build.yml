@@ -57,10 +57,14 @@ jobs:
         with:
           path: artifacts
 
+      - name: Debug artifacts
+        run: find artifacts -type f
+
       - name: Create release zips
         run: |
           cd artifacts
           for plugin in */; do
+            [ -d "$plugin" ] || continue
             plugin_name="${plugin%/}"
             cd "$plugin_name"
             zip -r "../${plugin_name}.zip" .
