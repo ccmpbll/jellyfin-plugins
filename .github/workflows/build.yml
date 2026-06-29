@@ -17,10 +17,10 @@ jobs:
             path: plugins/PlaylistRestrictor
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
@@ -37,7 +37,7 @@ jobs:
           cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/meta.json artifacts/${{ matrix.plugin.name }}/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.plugin.name }}
           path: artifacts/${{ matrix.plugin.name }}/
@@ -50,10 +50,10 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
 
