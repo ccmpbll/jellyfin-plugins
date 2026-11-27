@@ -15,6 +15,8 @@ jobs:
         plugin:
           - name: PlaylistRestrictor
             path: plugins/PlaylistRestrictor
+          - name: NoTrailers
+            path: plugins/NoTrailers
 
     steps:
       - uses: actions/checkout@v5
@@ -22,7 +24,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       - name: Restore dependencies
         run: dotnet restore "${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/Jellyfin.Plugin.${{ matrix.plugin.name }}.csproj"
@@ -33,7 +37,7 @@ jobs:
       - name: Package plugin
         run: |
           mkdir -p staging artifacts
-          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/bin/Release/net9.0/Jellyfin.Plugin.${{ matrix.plugin.name }}.dll staging/
+          cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/bin/Release/*/Jellyfin.Plugin.${{ matrix.plugin.name }}.dll staging/
           cp ${{ matrix.plugin.path }}/Jellyfin.Plugin.${{ matrix.plugin.name }}/meta.json staging/
           cd staging
           zip -r ../artifacts/${{ matrix.plugin.name }}.zip .

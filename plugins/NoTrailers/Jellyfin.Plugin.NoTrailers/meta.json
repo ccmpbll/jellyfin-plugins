@@ -1,0 +1,15 @@
+{
+  "category": "General",
+  "guid": "c00b58f5-93d6-48db-afa1-a152ca82704d",
+  "name": "No Trailers",
+  "description": "Clears remote (YouTube) trailer links from movies, series, seasons and episodes when they are added or refreshed, plus a scheduled sweep of the whole library. The Trailer button then no longer shows in any client.",
+  "owner": "ccampbell",
+  "overview": "Removes remote trailers so users cannot play them.",
+  "versions": [
+    {
+      "version": "1.0.0.0",
+      "changelog": "Initial release.",
+      "targetAbi": "12.4.0.0"
+    }
+  ]
+}
