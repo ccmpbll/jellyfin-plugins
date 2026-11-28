@@ -7,6 +7,11 @@
   "overview": "Prevents non-admin users from creating playlists via the Jellyfin API.",
   "versions": [
     {
+      "version": "1.2.1.0",
+      "changelog": "Fix settings page: its script never ran on Jellyfin 12.4, so settings did not load and the user list stayed empty.",
+      "targetAbi": "12.4.0.0"
+    },
+    {
       "version": "1.2.0.0",
       "changelog": "Choose which users are blocked (new 'Only selected users' mode with a user checklist). Default stays 'all non-admin users'.",
       "targetAbi": "12.4.0.0"
