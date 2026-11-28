@@ -27,22 +27,51 @@ public class PlaylistRestrictionFilter : IActionFilter
             return;
         }
 
-        var isAdmin = context.HttpContext.User.IsInRole("Administrator")
-                      || HasJellyfinAdminClaim(context.HttpContext.User);
-
-        if (!isAdmin)
+        var user = context.HttpContext.User;
+        var isAdmin = user.IsInRole("Administrator") || HasJellyfinAdminClaim(user);
+        if (isAdmin)
         {
-            var userId = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                         ?? context.HttpContext.User.FindFirst("Jellyfin-UserId")?.Value
-                         ?? "unknown";
-
-            _logger.LogInformation("Blocked playlist creation for non-admin user {UserId}", userId);
-
-            context.Result = new JsonResult(new { message = "Playlist creation is restricted to administrators." })
-            {
-                StatusCode = 403
-            };
+            return;
         }
+
+        var userId = user.FindFirst("Jellyfin-UserId")?.Value
+                     ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!IsBlocked(userId))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Blocked playlist change for user {UserId}", userId ?? "unknown");
+
+        context.Result = new JsonResult(new { message = "You are not allowed to create or change playlists." })
+        {
+            StatusCode = 403
+        };
+    }
+
+    private static bool IsBlocked(string? userId)
+    {
+        var config = Plugin.Instance?.Configuration;
+        if (config is null || !config.BlockSelectedUsersOnly)
+        {
+            return true;
+        }
+
+        if (!Guid.TryParse(userId, out var id))
+        {
+            return false;
+        }
+
+        foreach (var blocked in config.BlockedUserIds)
+        {
+            if (Guid.TryParse(blocked, out var b) && b == id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void OnActionExecuted(ActionExecutedContext context)

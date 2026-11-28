@@ -5,7 +5,7 @@
 </head>
 <body>
     <div id="PlaylistRestrictorConfigPage" data-role="page" class="page type-interior pluginConfigurationPage"
-         data-require="emby-checkbox">
+         data-require="emby-checkbox,emby-select,emby-button">
         <div data-role="content">
             <div class="content-primary">
                 <form id="PlaylistRestrictorConfigForm">
@@ -13,12 +13,24 @@
                         <label class="emby-checkbox-label">
                             <input id="RestrictPlaylistCreation" name="RestrictPlaylistCreation"
                                    type="checkbox" is="emby-checkbox" />
-                            <span>Restrict playlist creation to admins only</span>
+                            <span>Restrict playlists</span>
                         </label>
                         <div class="fieldDescription">
-                            When enabled, only administrator users can create new playlists.
-                            Non-admin users will receive a 403 Forbidden response.
+                            When enabled, blocked users cannot create playlists, add to them or change their sharing
+                            (403 Forbidden).
                         </div>
+                    </div>
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="BlockMode">Who is blocked</label>
+                        <select is="emby-select" id="BlockMode" class="emby-select-withcolor emby-select">
+                            <option value="all">All non-admin users</option>
+                            <option value="selected">Only the users selected below</option>
+                        </select>
+                    </div>
+                    <div id="UserListContainer" class="verticalSection">
+                        <h3 class="sectionTitle">Blocked users</h3>
+                        <div id="UserList" class="checkboxList paperList" style="padding:.5em 1em;"></div>
+                        <div class="fieldDescription">Administrators are never blocked and are not listed.</div>
                     </div>
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -34,11 +46,46 @@
             pluginUniqueId: 'd4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90'
         };
 
+        function updateUserListVisibility() {
+            var show = document.querySelector('#BlockMode').value === 'selected';
+            document.querySelector('#UserListContainer').style.display = show ? '' : 'none';
+        }
+
+        document.querySelector('#BlockMode').addEventListener('change', updateUserListVisibility);
+
         document.querySelector('#PlaylistRestrictorConfigPage')
             .addEventListener('pageshow', function () {
                 Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(PlaylistRestrictorConfig.pluginUniqueId).then(function (config) {
+                Promise.all([
+                    ApiClient.getPluginConfiguration(PlaylistRestrictorConfig.pluginUniqueId),
+                    ApiClient.getUsers()
+                ]).then(function (results) {
+                    var config = results[0];
+                    var users = results[1].filter(function (u) { return !u.Policy || !u.Policy.IsAdministrator; });
+                    var blocked = (config.BlockedUserIds || []).map(function (id) { return id.replace(/-/g, '').toLowerCase(); });
+
                     document.querySelector('#RestrictPlaylistCreation').checked = config.RestrictPlaylistCreation;
+                    document.querySelector('#BlockMode').value = config.BlockSelectedUsersOnly ? 'selected' : 'all';
+
+                    var list = document.querySelector('#UserList');
+                    list.innerHTML = '';
+                    users.forEach(function (u) {
+                        var label = document.createElement('label');
+                        label.className = 'emby-checkbox-label';
+                        var input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.setAttribute('is', 'emby-checkbox');
+                        input.className = 'chkBlockedUser';
+                        input.dataset.userId = u.Id;
+                        input.checked = blocked.indexOf(u.Id.replace(/-/g, '').toLowerCase()) !== -1;
+                        var span = document.createElement('span');
+                        span.textContent = u.Name;
+                        label.appendChild(input);
+                        label.appendChild(span);
+                        list.appendChild(label);
+                    });
+
+                    updateUserListVisibility();
                     Dashboard.hideLoadingMsg();
                 });
             });
@@ -48,6 +95,10 @@
                 Dashboard.showLoadingMsg();
                 ApiClient.getPluginConfiguration(PlaylistRestrictorConfig.pluginUniqueId).then(function (config) {
                     config.RestrictPlaylistCreation = document.querySelector('#RestrictPlaylistCreation').checked;
+                    config.BlockSelectedUsersOnly = document.querySelector('#BlockMode').value === 'selected';
+                    config.BlockedUserIds = Array.prototype.map.call(
+                        document.querySelectorAll('.chkBlockedUser:checked'),
+                        function (el) { return el.dataset.userId; });
                     ApiClient.updatePluginConfiguration(PlaylistRestrictorConfig.pluginUniqueId, config).then(function () {
                         Dashboard.processPluginConfigurationUpdateResult();
                     });
