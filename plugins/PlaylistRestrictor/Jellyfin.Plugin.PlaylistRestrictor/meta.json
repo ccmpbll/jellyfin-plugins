@@ -7,6 +7,11 @@
   "overview": "Prevents non-admin users from creating playlists via the Jellyfin API.",
   "versions": [
     {
+      "version": "1.1.0.0",
+      "changelog": "Rebuilt for Jellyfin 12.4 (net10.0).",
+      "targetAbi": "12.4.0.0"
+    },
+    {
       "version": "1.0.0.0",
       "changelog": "Initial release.",
       "targetAbi": "10.11.0.0"
